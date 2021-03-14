@@ -1,0 +1,10 @@
+{
+	"mod_name": "HighDefinitionUIScaling",
+	"version": "1.0.0",
+	"requirement": [
+		"OptionsInjector"
+	],
+	"patch": [
+		"patch/HiDefUIScaling"
+	]
+}

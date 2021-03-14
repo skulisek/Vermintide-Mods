@@ -1,0 +1,10 @@
+{
+	"mod_name": "SharedLuck",
+	"version": "1.0.0",
+	"requirement": [
+		"OptionsInjector"
+	],
+	"patch": [
+		"patch/SharedLuck"
+	]
+}
