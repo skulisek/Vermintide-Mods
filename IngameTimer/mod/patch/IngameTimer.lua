@@ -4,11 +4,14 @@ local user_setting = Application.user_setting
 
 IngameTimer = {}
 
+IngameTimer.session_time = 0
+IngameTimer.last_update_time = 0
+
 IngameTimer.widget_settings = {
 	ACTIVE = {
 		["save"] = "ingame_timer_active",
 		["widget_type"] = "stepper",
-		["text"] = "In-game Timer",
+		["text"] = "In-game Mission Timer",
 		["tooltip"] =  "In-game Timer\n" ..
 				"Enables an in-game timer showing the time spent in the current map.",
 		["value_type"] = "boolean",
@@ -18,12 +21,26 @@ IngameTimer.widget_settings = {
 		},
 		["default"] = 2, -- Default second option is enabled. In this case On
 	},
+    ACTIVE_IN_INN = {
+        ["save"] = "ingame_timer_active_inn",
+        ["widget_type"] = "stepper",
+        ["text"] = "Inn Session Timer",
+        ["tooltip"] =  "In-game Timer\n" ..
+                "Enables an in-game timer showing the time spent in the current session.",
+        ["value_type"] = "boolean",
+        ["options"] = {
+            {text = "Disabled", value = false},
+            {text = "Enabled", value = true},
+        },
+        ["default"] = 2, -- Default second option is enabled. In this case On
+    },
 }
 
 IngameTimer.create_options = function()
 	Mods.option_menu:add_group("HUD", "In-game Timer")
 
 	Mods.option_menu:add_item("HUD", IngameTimer.widget_settings.ACTIVE, true)
+    Mods.option_menu:add_item("HUD", IngameTimer.widget_settings.ACTIVE_IN_INN, true)
 end
 
 GameTimerUI.update_absolute = function (self, dt)
@@ -37,7 +54,17 @@ GameTimerUI.update_absolute = function (self, dt)
 
 	local current_network_time = Managers.state.network:network_time()
 
-	local time = current_network_time
+	if IngameTimer.last_update_time > current_network_time then
+		IngameTimer.session_time = IngameTimer.session_time + IngameTimer.last_update_time
+	end
+	IngameTimer.last_update_time = current_network_time
+
+    local time = current_network_time
+
+    local game_mode_key = Managers.state.game_mode:game_mode_key()
+    if game_mode_key == "inn" then
+        time = IngameTimer.session_time + current_network_time
+    end
 
 	self:set_time(time)
 	self:draw(dt)
@@ -92,10 +119,8 @@ Mods.hook.set(mod_name, "IngameHud.init", function(func, self, ingame_ui_context
 		self.contract_log_ui = ContractLogUI:new(ingame_ui_context)
 	end
 
-	if user_setting(IngameTimer.widget_settings.ACTIVE.save) or game_mode_key == "survival" then
-		self.game_timer_ui = GameTimerUI:new(ingame_ui_context)
-	end
-
+	-- Moved this out of the condition
+	self.game_timer_ui = GameTimerUI:new(ingame_ui_context)
 	if game_mode_key == "survival" then
 		self.difficulty_unlock_ui = DifficultyUnlockUI:new(ingame_ui_context)
 		self.difficulty_notification_ui = DifficultyNotificationUI:new(ingame_ui_context)
@@ -110,7 +135,13 @@ Mods.hook.set(mod_name, "IngameHud.update", function(func, self, dt, t, menu_act
 	local game_timer_ui = self.game_timer_ui
 	local game_mode_key = Managers.state.game_mode:game_mode_key()
 
-	if game_mode_key ~= "survival" and game_timer_ui and user_setting(IngameTimer.widget_settings.ACTIVE.save) then
+    if game_mode_key == "inn" and game_timer_ui and user_setting(IngameTimer.widget_settings.ACTIVE_IN_INN.save) then
+		Profiler.start("updating game timer")
+		game_timer_ui:update_absolute(dt)
+		Profiler.stop("game timer")
+	end
+
+	if game_mode_key == "adventure" and game_timer_ui and user_setting(IngameTimer.widget_settings.ACTIVE.save) then
 		Profiler.start("updating game timer")
 		game_timer_ui:update_absolute(dt)
 		Profiler.stop("game timer")
